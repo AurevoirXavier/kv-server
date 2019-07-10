@@ -265,8 +265,14 @@ fn new_client() -> KvServerClient {
 
 #[test]
 fn client() {
+    // --- std ---
+    use std::io::Write;
+
     let client = new_client();
     loop {
+        print!("λ: ");
+        io::stdout().flush().unwrap();
+
         let mut request = Request::new();
         let input = {
             let mut s = String::new();
@@ -304,7 +310,7 @@ fn client() {
                     match f.wait() {
                         Ok((Some(scan_response), next)) => {
                             buffer.push(next);
-                            println!("{:?}, K: {}, V: {}", scan_response.status, scan_response.key, scan_response.value);
+                            println!("> {:?}, K: {}, V: {}", scan_response.status, scan_response.key, scan_response.value);
                         }
                         Ok((None, _)) => break,
                         Err(_) => ()
@@ -313,18 +319,19 @@ fn client() {
 
                 continue;
             }
-            "merge" => {
-                request.set_operation(Operation::MERGE);
-            }
-            "exit" => break,
+            "merge" => { request.set_operation(Operation::MERGE); }
+            "exit" => {
+                println!("> bye~");
+                break
+            },
             cmd => {
-                println!("Invalid command {}", cmd);
+                println!("> Invalid command {}", cmd);
                 continue;
             }
         }
 
         let response = client.serve(&request).unwrap();
-        println!("{:?} {:?}, {}", request.operation, response.status, response.value);
+        println!("> {:?} {:?}, {}", request.operation, response.status, response.value);
     }
 }
 
