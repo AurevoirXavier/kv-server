@@ -16,9 +16,10 @@ use std::{
     sync::{Arc, RwLock},
 };
 // --- external ---
-use crate::Scanner;
 use chrono::Utc;
 use failure::Error;
+// --- custom ---
+use crate::Scanner;
 
 pub struct HashEngineBuilder {
     options: Options,
