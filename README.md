@@ -159,5 +159,6 @@ pub struct HashEngine {
 - Friendly log
 - BTree engine
 - LSMTree engine
-- Hash engine redis-like scan cursor
-- Hash engine merge policy
+- Hash engine
+    - a redis-like scan cursor
+    - merge policy
