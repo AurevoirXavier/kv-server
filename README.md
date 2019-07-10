@@ -18,7 +18,7 @@ Syntax:
 put [key: String] [value: String]
 get [key: String]
 del [key: String]
-scan [range: isize (set -1 to scan the whole map)] (Optional field [regex: String])
+scan [range: isize (set -1 to scan the whole map)] [regex (optional): String]
 merge
 exit
 ```
