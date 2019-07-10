@@ -52,7 +52,6 @@ impl HashEngineBuilder {
 #[derive(Clone)]
 pub struct HashEngine {
     options: Options,
-    merge_lock: Arc<RwLock<bool>>,
 
     storage_dir: String,
     key_dirs: Arc<RwLock<KeyDirs>>,
@@ -120,7 +119,6 @@ impl HashEngine {
 
         Ok(HashEngine {
             options: builder.options,
-            merge_lock: Arc::new(RwLock::new(false)),
             storage_dir: builder.storage_dir,
             key_dirs: Arc::new(RwLock::new(key_dirs)),
             active_file: DHFile {
@@ -242,12 +240,6 @@ impl super::Engine for HashEngine {
             fs::{File, create_dir, remove_dir_all, rename},
         };
 
-        {
-            let mut merge_lock = self.merge_lock.write().unwrap();
-            if *merge_lock { return Err(HashEngineError::MergeLocked.into()); }
-            *merge_lock = true;
-        }
-
         const MERGE_DIR: &'static str = ".merge";
 
         create_dir(MERGE_DIR)?;
@@ -259,15 +251,14 @@ impl super::Engine for HashEngine {
             hint_file: Arc::new(RwLock::new(DHFile::set_active_file(MERGE_DIR, file_id, "hint")?)),
         };
 
+        let mut w = self.key_dirs.write().unwrap();
+
         {
             let mut file_map = HashMap::new();
             let (files, _) = HashEngine::scan_and_sort_dh_files(&self.storage_dir, "data")?;
             for (path, file_id) in files.iter() { file_map.insert(file_id, File::open(path)?); }
 
-            for (k, entry) in self.key_dirs
-                .write()
-                .unwrap()
-                .iter_mut() {
+            for (k, entry) in w.iter_mut() {
                 if let Some(file) = file_map.get_mut(&entry.file_id) {
                     if dh_file.write_offset >= self.options.file_size_limit {
                         file_id = Utc::now().timestamp_nanos() as _;
@@ -304,7 +295,7 @@ impl super::Engine for HashEngine {
         } else { remove_dir_all(&self.storage_dir)?; }
         rename(MERGE_DIR, &self.storage_dir)?;
 
-        *self.merge_lock.write().unwrap() = false;
+        drop(w);
 
         Ok(())
     }

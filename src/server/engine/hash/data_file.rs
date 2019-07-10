@@ -238,6 +238,7 @@ impl DataFiles {
             match File::open(format!("{}/{}.data", storage_dir, file_id)) {
                 Ok(file) => {
                     drop(r);
+
                     self.0
                         .write()
                         .unwrap()
