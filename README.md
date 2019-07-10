@@ -10,7 +10,9 @@ Follow the steps below:
 4. open a new console and go to the `kv-server` directory
 5. `cargo test --package kv-server --test test client -- --exact`
 
-Now you got a interactive client:
+Now you got a interactive client: 
+
+S
 
 ```text
 λ: put 1 1
