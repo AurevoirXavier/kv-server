@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package kv_server;
+
+service KVServer {
+    rpc Serve (Request) returns (Response) {
+    }
+    rpc Scan (ScanRequest) returns (stream ScanResponse) {
+    }
+}
+
+enum Operation {
+    PUT = 0;
+    GET = 1;
+    DEL = 2;
+    MERGE = 3;
+}
+
+enum Status {
+    OK = 0;
+    Err = 1;
+    NotFound = 2;
+    InvalidRegex = 3;
+//    MergeLocked = 4;
+}
+
+message Request {
+    Operation operation = 1;
+    string key = 2;
+    string value = 3;
+}
+
+message Response {
+    Status status = 1;
+    string value = 2;
+}
+
+message ScanRequest {
+    int64 range = 2;
+    string regex = 3;
+}
+
+message ScanResponse {
+    Status status = 1;
+    string key = 2;
+    string value = 3;
+}
