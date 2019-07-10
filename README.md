@@ -12,7 +12,16 @@ Follow the steps below:
 
 Now you got a interactive client: 
 
-S
+Syntax:
+
+```text
+put [key: String] [value: String]
+get [key: String]
+del [key: String]
+scan [range: isize (set -1 to scan the whole map)] (Optional field [regex: String])
+merge
+exit
+```
 
 ```text
 λ: put 1 1
