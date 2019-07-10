@@ -10,7 +10,7 @@ Follow the steps below:
 4. open a new console and go to the `kv-server` directory
 5. `cargo test --package kv-server --test test client -- --exact`
 
-Now you get a interactive client:
+Now you got a interactive client:
 
 ```text
 λ: put 1 1
@@ -57,7 +57,7 @@ test client ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out
 ``` 
 
-more example see the [tests](https://github.com/AurevoirXavier/kv-server/blob/master/tests/test.rs)
+More examples see the [tests](https://github.com/AurevoirXavier/kv-server/blob/master/tests/test.rs)
 
 ### C/S
 
@@ -90,9 +90,9 @@ service KVServer {
 
 ### Storage engine
 
-- [ ] BTree Engine
-- [x] Hash Engine
-- [ ] LSMTree Engine
+- [ ] BTree engine
+- [x] Hash engine
+- [ ] LSMTree engine
 
 ```rust
 pub trait Engine {
