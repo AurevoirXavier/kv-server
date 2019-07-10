@@ -27,15 +27,10 @@ pub struct Server<E: Engine> {
 impl<E> Server<E> where E: Engine {
     pub fn new(engine: E) -> Self { Self { engine } }
 
-    #[allow(dead_code)]
     pub fn put(&mut self, k: Vec<u8>, v: Vec<u8>) -> Result<(), Error> { self.engine.put(k, v) }
-    #[allow(dead_code)]
     pub fn get(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, Error> { self.engine.get(k) }
-    #[allow(dead_code)]
     pub fn del(&mut self, k: &[u8]) -> Result<(), Error> { self.engine.del(k) }
-    #[allow(dead_code)]
     pub fn scan(&mut self, scanner: Scanner) -> Result<(Scanner, Vec<(Vec<u8>, Vec<u8>)>), Error> { self.engine.scan(scanner) }
-    #[allow(dead_code)]
     pub fn merge(&mut self) -> Result<(), Error> { self.engine.merge() }
 }
 
