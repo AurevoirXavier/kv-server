@@ -122,7 +122,6 @@ Based on [bitcask](https://en.wikipedia.org/wiki/Bitcask) model
 ```rust
 pub struct HashEngine {
     options: Options,
-    merge_lock: Arc<RwLock<bool>>,
 
     storage_dir: String,
     key_dirs: Arc<RwLock<KeyDirs>>,
