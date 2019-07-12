@@ -12,8 +12,4 @@ pub mod protos;
 pub mod server;
 
 pub use protos::kv_server_grpc::create_kv_server;
-pub use server::{
-    HashEngine, HashEngineBuilder, HashScanner, Scanner, Server,
-    Engine,
-    hash,
-};
+pub use server::{hash, Engine, HashEngine, HashEngineBuilder, HashScanner, Scanner, Server};

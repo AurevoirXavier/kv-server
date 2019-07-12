@@ -18,9 +18,15 @@ impl HashScanner {
 
             if let Some((k, _)) = iter.next() {
                 if let Some(ref regex) = self.regex {
-                    if regex.is_match(k) { matched_keys.push(k.to_owned()); }
-                } else { matched_keys.push(k.to_owned()) }
-            } else { break; }
+                    if regex.is_match(k) {
+                        matched_keys.push(k.to_owned());
+                    }
+                } else {
+                    matched_keys.push(k.to_owned())
+                }
+            } else {
+                break;
+            }
         }
 
         matched_keys

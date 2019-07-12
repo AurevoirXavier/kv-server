@@ -1,23 +1,22 @@
 extern crate kv_server;
 
 // --- std ---
-
 use std::{
-    io,
     fs::{read_dir, remove_dir_all},
+    io,
     sync::Arc,
 };
 // --- external ---
-use futures::{Stream, Future};
+use futures::{Future, Stream};
 use hashbrown::HashMap;
 // --- custom ---
 use kv_server::{
-    HashEngine, HashEngineBuilder, HashScanner, Scanner, Server,
     hash::{MergePolicy, Options},
     protos::{
         kv_server::{Operation, Request, ScanRequest, Status},
         kv_server_grpc::KvServerClient,
     },
+    HashEngine, HashEngineBuilder, HashScanner, Scanner, Server,
 };
 
 const STORAGE_DIR: &'static str = "tests/data/test-all";
@@ -25,11 +24,13 @@ const STORAGE_DIR: &'static str = "tests/data/test-all";
 fn new_server(options: Options) -> Server<HashEngine> {
     let _ = remove_dir_all(STORAGE_DIR);
 
-    Server::new(HashEngineBuilder::new()
-        .storage_dir(STORAGE_DIR)
-        .options(options)
-        .build()
-        .unwrap())
+    Server::new(
+        HashEngineBuilder::new()
+            .storage_dir(STORAGE_DIR)
+            .options(options)
+            .build()
+            .unwrap(),
+    )
 }
 
 #[test]
@@ -42,9 +43,15 @@ fn del() {
         merge_policy: MergePolicy::Test,
     });
 
-    for i in 0..N { server.put(vec![i; 8], vec![i; 256]).unwrap(); }
-    for i in 0..N { server.del(&vec![i; 8]).unwrap(); }
-    for i in 0..N { assert_eq!(server.get(&vec![i; 8]).unwrap(), None); }
+    for i in 0..N {
+        server.put(vec![i; 8], vec![i; 256]).unwrap();
+    }
+    for i in 0..N {
+        server.del(&vec![i; 8]).unwrap();
+    }
+    for i in 0..N {
+        assert_eq!(server.get(&vec![i; 8]).unwrap(), None);
+    }
 }
 
 #[test]
@@ -57,7 +64,9 @@ fn scan() {
         merge_policy: MergePolicy::Test,
     });
 
-    for i in 0..N { server.put(vec![i; 8], vec![i; 256]).unwrap(); }
+    for i in 0..N {
+        server.put(vec![i; 8], vec![i; 256]).unwrap();
+    }
 
     let scanner = Scanner::HashScanner(HashScanner {
         range: 20,
@@ -73,7 +82,9 @@ fn scan() {
     let kvs = server.scan(scanner).unwrap().1;
     assert_eq!(kvs.len(), 100);
 
-    for i in 0..N { server.del(&vec![i; 8]).unwrap(); }
+    for i in 0..N {
+        server.del(&vec![i; 8]).unwrap();
+    }
 
     let scanner = Scanner::HashScanner(HashScanner {
         range: -1,
@@ -93,13 +104,17 @@ fn merge() {
         merge_policy: MergePolicy::Test,
     });
 
-    for i in 0..N { server.put(vec![i; 8], vec![i; 256]).unwrap(); }
-    for i in 0..N { server.put(vec![i; 8], vec![i; 256]).unwrap(); }
+    for i in 0..N {
+        server.put(vec![i; 8], vec![i; 256]).unwrap();
+    }
+    for i in 0..N {
+        server.put(vec![i; 8], vec![i; 256]).unwrap();
+    }
 
     server.merge().unwrap();
 
     for i in 0..N {
-//        assert!(server.get(&vec![i; 8]).is_ok());
+        //        assert!(server.get(&vec![i; 8]).is_ok());
         assert_eq!(server.get(&vec![i; 8]).unwrap().unwrap(), vec![i; 256]);
     }
 
@@ -108,7 +123,15 @@ fn merge() {
             .unwrap()
             .into_iter()
             .map(|e| e.unwrap())
-            .filter(|e| if let Some(extension) = e.path().extension() { if extension == "data" || extension == "hint" { true } else { false } } else { false })
+            .filter(|e| if let Some(extension) = e.path().extension() {
+                if extension == "data" || extension == "hint" {
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            })
             .count(),
         N as usize * 2
     );
@@ -125,7 +148,9 @@ fn data_file_scale_up() {
         for entry in read_dir(TEST_DIR).unwrap() {
             let entry = entry.unwrap();
             if let Some(extension) = entry.path().extension() {
-                if extension == "data" || extension == "hint" { count += 1; }
+                if extension == "data" || extension == "hint" {
+                    count += 1;
+                }
             }
         }
 
@@ -136,17 +161,21 @@ fn data_file_scale_up() {
 
     let mut result_1 = HashMap::new();
     {
-        let mut server = Server::new(HashEngineBuilder::new()
-            .storage_dir(TEST_DIR)
-            .options(Options {
-                file_size_limit: 2,
-                keep_old_files: false,
-                merge_policy: MergePolicy::Test,
-            })
-            .build()
-            .unwrap());
+        let mut server = Server::new(
+            HashEngineBuilder::new()
+                .storage_dir(TEST_DIR)
+                .options(Options {
+                    file_size_limit: 2,
+                    keep_old_files: false,
+                    merge_policy: MergePolicy::Test,
+                })
+                .build()
+                .unwrap(),
+        );
 
-        for i in 0..N { server.put(vec![i as _], vec![i as _]).unwrap(); }
+        for i in 0..N {
+            server.put(vec![i as _], vec![i as _]).unwrap();
+        }
         assert_eq!(count_files(), N * 2);
 
         for i in 0..N {
@@ -160,15 +189,17 @@ fn data_file_scale_up() {
 
     let mut result_2 = HashMap::new();
     {
-        let mut server = Server::new(HashEngineBuilder::new()
-            .storage_dir(TEST_DIR)
-            .options(Options {
-                file_size_limit: 5 * 0x100000,
-                keep_old_files: false,
-                merge_policy: MergePolicy::Test,
-            })
-            .build()
-            .unwrap());
+        let mut server = Server::new(
+            HashEngineBuilder::new()
+                .storage_dir(TEST_DIR)
+                .options(Options {
+                    file_size_limit: 5 * 0x100000,
+                    keep_old_files: false,
+                    merge_policy: MergePolicy::Test,
+                })
+                .build()
+                .unwrap(),
+        );
 
         server.merge().unwrap();
         assert_eq!(count_files(), 2);
@@ -196,7 +227,9 @@ fn data_file_scale_down() {
         for entry in read_dir(TEST_DIR).unwrap() {
             let entry = entry.unwrap();
             if let Some(extension) = entry.path().extension() {
-                if extension == "data" || extension == "hint" { count += 1; }
+                if extension == "data" || extension == "hint" {
+                    count += 1;
+                }
             }
         }
 
@@ -207,17 +240,21 @@ fn data_file_scale_down() {
 
     let mut result_1 = HashMap::new();
     {
-        let mut server = Server::new(HashEngineBuilder::new()
-            .storage_dir(TEST_DIR)
-            .options(Options {
-                file_size_limit: 5 * 0x100000,
-                keep_old_files: false,
-                merge_policy: MergePolicy::Test,
-            })
-            .build()
-            .unwrap());
+        let mut server = Server::new(
+            HashEngineBuilder::new()
+                .storage_dir(TEST_DIR)
+                .options(Options {
+                    file_size_limit: 5 * 0x100000,
+                    keep_old_files: false,
+                    merge_policy: MergePolicy::Test,
+                })
+                .build()
+                .unwrap(),
+        );
 
-        for i in 0..N { server.put(vec![i as _], vec![i as _]).unwrap(); }
+        for i in 0..N {
+            server.put(vec![i as _], vec![i as _]).unwrap();
+        }
         assert_eq!(count_files(), 2);
 
         for i in 0..N {
@@ -231,15 +268,17 @@ fn data_file_scale_down() {
 
     let mut result_2 = HashMap::new();
     {
-        let mut server = Server::new(HashEngineBuilder::new()
-            .storage_dir(TEST_DIR)
-            .options(Options {
-                file_size_limit: 2,
-                keep_old_files: false,
-                merge_policy: MergePolicy::Test,
-            })
-            .build()
-            .unwrap());
+        let mut server = Server::new(
+            HashEngineBuilder::new()
+                .storage_dir(TEST_DIR)
+                .options(Options {
+                    file_size_limit: 2,
+                    keep_old_files: false,
+                    merge_policy: MergePolicy::Test,
+                })
+                .build()
+                .unwrap(),
+        );
 
         server.merge().unwrap();
         assert_eq!(count_files(), N * 2);
@@ -260,7 +299,9 @@ fn new_client() -> KvServerClient {
     // --- external ---
     use grpcio::{ChannelBuilder, EnvBuilder};
 
-    KvServerClient::new(ChannelBuilder::new(Arc::new(EnvBuilder::new().build())).connect("127.0.0.1:23333"))
+    KvServerClient::new(
+        ChannelBuilder::new(Arc::new(EnvBuilder::new().build())).connect("127.0.0.1:23333"),
+    )
 }
 
 #[test]
@@ -302,7 +343,9 @@ fn client() {
             "scan" => {
                 let mut scan_request = ScanRequest::new();
                 scan_request.set_range(s[1].parse().unwrap());
-                if s.len() > 2 { scan_request.set_regex(s[2].to_owned()); }
+                if s.len() > 2 {
+                    scan_request.set_regex(s[2].to_owned());
+                }
 
                 let mut buffer = vec![client.scan(&scan_request).unwrap()];
                 loop {
@@ -310,20 +353,25 @@ fn client() {
                     match f.wait() {
                         Ok((Some(scan_response), next)) => {
                             buffer.push(next);
-                            println!("> {:?}, K: {}, V: {}", scan_response.status, scan_response.key, scan_response.value);
+                            println!(
+                                "> {:?}, K: {}, V: {}",
+                                scan_response.status, scan_response.key, scan_response.value
+                            );
                         }
                         Ok((None, _)) => break,
-                        Err(_) => ()
+                        Err(_) => (),
                     }
                 }
 
                 continue;
             }
-            "merge" => { request.set_operation(Operation::MERGE); }
+            "merge" => {
+                request.set_operation(Operation::MERGE);
+            }
             "exit" => {
                 println!("> bye~");
-                break
-            },
+                break;
+            }
             cmd => {
                 println!("> Invalid command {}", cmd);
                 continue;
@@ -331,7 +379,10 @@ fn client() {
         }
 
         let response = client.serve(&request).unwrap();
-        println!("> {:?} {:?}, {}", request.operation, response.status, response.value);
+        println!(
+            "> {:?} {:?}, {}",
+            request.operation, response.status, response.value
+        );
     }
 }
 
@@ -364,8 +415,11 @@ fn get_with_client() {
         request.set_key(i.to_string());
 
         let response = client.serve(&request).unwrap();
-        println!("{:?} {:?}, {}", request.operation, response.status, response.value);
-//        assert_eq!(response.value, );
+        println!(
+            "{:?} {:?}, {}",
+            request.operation, response.status, response.value
+        );
+        //        assert_eq!(response.value, );
     }
 }
 

@@ -7,29 +7,28 @@ use std::{
     thread::spawn,
 };
 // --- external ---
-use futures::{
-    Future,
-    sync::oneshot,
-};
-use grpcio::{ServerBuilder, Environment};
+use futures::{sync::oneshot, Future};
+use grpcio::{Environment, ServerBuilder};
 // --- custom ---
 use kv_server::{
-    HashEngineBuilder, Server,
     create_kv_server,
     hash::{MergePolicy, Options},
+    HashEngineBuilder, Server,
 };
 
 fn main() {
-    let service = create_kv_server(Server::new(HashEngineBuilder::new()
-        .storage_dir("tests/data/test-grpc")
-        .options(Options {
-//            file_size_limit: 2,
-            file_size_limit: 5 * 0x100000,
-            keep_old_files: false,
-            merge_policy: MergePolicy::Test,
-        })
-        .build()
-        .unwrap()));
+    let service = create_kv_server(Server::new(
+        HashEngineBuilder::new()
+            .storage_dir("tests/data/test-grpc")
+            .options(Options {
+                //            file_size_limit: 2,
+                file_size_limit: 5 * 0x100000,
+                keep_old_files: false,
+                merge_policy: MergePolicy::Test,
+            })
+            .build()
+            .unwrap(),
+    ));
     let mut server = ServerBuilder::new(Arc::new(Environment::new(1)))
         .register_service(service)
         .bind("127.0.0.1", 23333)
@@ -38,7 +37,9 @@ fn main() {
 
     server.start();
 
-    for &(ref host, port) in server.bind_addrs() { println!("listening on {}:{}", host, port); }
+    for &(ref host, port) in server.bind_addrs() {
+        println!("listening on {}:{}", host, port);
+    }
 
     let (tx, rx) = oneshot::channel();
     spawn(move || {

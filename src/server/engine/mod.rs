@@ -1,8 +1,8 @@
 // TODO
 pub mod btree;
 // TODO
-pub mod lsm_tree;
 pub mod hash;
+pub mod lsm_tree;
 
 // --- external ---
 use failure::Error;

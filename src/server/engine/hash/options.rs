@@ -1,7 +1,7 @@
 // TODO
 #[derive(Clone)]
 pub enum MergePolicy {
-    Test
+    Test,
 }
 
 #[derive(Clone)]

@@ -2,11 +2,8 @@ mod engine;
 mod scanner;
 
 pub use engine::{
+    hash::{self, HashEngine, HashEngineBuilder, HashScanner},
     Engine,
-    hash::{
-        self,
-        HashEngine, HashEngineBuilder, HashScanner,
-    },
 };
 pub use scanner::Scanner;
 
@@ -21,20 +18,38 @@ use crate::protos::{
 
 #[derive(Clone)]
 pub struct Server<E: Engine> {
-    engine: E
+    engine: E,
 }
 
-impl<E> Server<E> where E: Engine {
-    pub fn new(engine: E) -> Self { Self { engine } }
+impl<E> Server<E>
+where
+    E: Engine,
+{
+    pub fn new(engine: E) -> Self {
+        Self { engine }
+    }
 
-    pub fn put(&mut self, k: Vec<u8>, v: Vec<u8>) -> Result<(), Error> { self.engine.put(k, v) }
-    pub fn get(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, Error> { self.engine.get(k) }
-    pub fn del(&mut self, k: &[u8]) -> Result<(), Error> { self.engine.del(k) }
-    pub fn scan(&mut self, scanner: Scanner) -> Result<(Scanner, Vec<(Vec<u8>, Vec<u8>)>), Error> { self.engine.scan(scanner) }
-    pub fn merge(&mut self) -> Result<(), Error> { self.engine.merge() }
+    pub fn put(&mut self, k: Vec<u8>, v: Vec<u8>) -> Result<(), Error> {
+        self.engine.put(k, v)
+    }
+    pub fn get(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, Error> {
+        self.engine.get(k)
+    }
+    pub fn del(&mut self, k: &[u8]) -> Result<(), Error> {
+        self.engine.del(k)
+    }
+    pub fn scan(&mut self, scanner: Scanner) -> Result<(Scanner, Vec<(Vec<u8>, Vec<u8>)>), Error> {
+        self.engine.scan(scanner)
+    }
+    pub fn merge(&mut self) -> Result<(), Error> {
+        self.engine.merge()
+    }
 }
 
-impl<E> KvServer for Server<E> where E: Engine {
+impl<E> KvServer for Server<E>
+where
+    E: Engine,
+{
     fn serve(&mut self, ctx: RpcContext, req: Request, sink: UnarySink<Response>) {
         // --- external ---
         use futures::Future;
@@ -43,26 +58,32 @@ impl<E> KvServer for Server<E> where E: Engine {
 
         let mut response = Response::new();
         match req.operation {
-            Operation::PUT => match self.put(req.key.clone().into_bytes(), req.value.clone().into_bytes()) {
-                Ok(_) => response.set_status(Status::OK),
-                Err(_) => response.set_status(Status::Err),
+            Operation::PUT => {
+                match self.put(req.key.clone().into_bytes(), req.value.clone().into_bytes()) {
+                    Ok(_) => response.set_status(Status::OK),
+                    Err(_) => response.set_status(Status::Err),
+                }
             }
             Operation::GET => match self.get(req.key.as_bytes()) {
-                Ok(option) => if let Some(v) = option {
-                    response.set_value(String::from_utf8_lossy(&v).to_string());
-                    response.set_status(Status::OK);
-                } else { response.set_status(Status::NotFound); }
+                Ok(option) => {
+                    if let Some(v) = option {
+                        response.set_value(String::from_utf8_lossy(&v).to_string());
+                        response.set_status(Status::OK);
+                    } else {
+                        response.set_status(Status::NotFound);
+                    }
+                }
                 Err(_) => response.set_status(Status::Err),
-            }
+            },
             Operation::DEL => match self.del(req.key.as_bytes()) {
                 Ok(_) => response.set_status(Status::OK),
                 Err(_) => response.set_status(Status::Err),
-            }
+            },
             // TODO stream progress
             Operation::MERGE => match self.merge() {
                 Ok(_) => response.set_status(Status::OK),
-                Err(_) => response.set_status(Status::Err)
-            }
+                Err(_) => response.set_status(Status::Err),
+            },
         }
 
         let f = sink
@@ -75,17 +96,24 @@ impl<E> KvServer for Server<E> where E: Engine {
 
     fn scan(&mut self, ctx: RpcContext, req: ScanRequest, sink: ServerStreamingSink<ScanResponse>) {
         // --- external ---
-        use futures::{Future, Sink, stream};
+        use futures::{stream, Future, Sink};
         use grpcio::{Error, WriteFlags};
         use regex::bytes::Regex;
 
         let scanner = Scanner::HashScanner(HashScanner {
             range: req.range,
-            regex: if req.regex.is_empty() { None } else if let Ok(regex) = Regex::new(&req.regex) { Some(regex) } else {
+            regex: if req.regex.is_empty() {
+                None
+            } else if let Ok(regex) = Regex::new(&req.regex) {
+                Some(regex)
+            } else {
                 let mut scan_response = ScanResponse::new();
                 scan_response.set_status(Status::InvalidRegex);
                 let f = sink
-                    .send_all(stream::iter_ok::<_, Error>(vec![(scan_response, WriteFlags::default())]))
+                    .send_all(stream::iter_ok::<_, Error>(vec![(
+                        scan_response,
+                        WriteFlags::default(),
+                    )]))
                     .map(|_| println!("Responded with result"))
                     .map_err(move |e| eprintln!("Failed to handle scan request: {:?}", e));
 

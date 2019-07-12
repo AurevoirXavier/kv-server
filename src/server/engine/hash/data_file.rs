@@ -123,7 +123,11 @@ pub struct DHFile {
 }
 
 impl DHFile {
-    pub fn set_active_file(storage_dir: &str, file_id: u64, extension: &str) -> Result<File, Error> {
+    pub fn set_active_file(
+        storage_dir: &str,
+        file_id: u64,
+        extension: &str,
+    ) -> Result<File, Error> {
         // --- std ---
         use std::fs::OpenOptions;
 
@@ -148,11 +152,11 @@ impl DHFile {
                         value_position,
                     } = HintHeader::from(bytes.as_ref());
 
-//                    println!("{}, {}, {}, {}",
-//                             timestamp,
-//                             key_size,
-//                             value_size,
-//                             value_position);
+                    //                    println!("{}, {}, {}, {}",
+                    //                             timestamp,
+                    //                             key_size,
+                    //                             value_size,
+                    //                             value_position);
 
                     let mut bytes = vec![0; key_size as _];
                     file.read_exact(&mut bytes)?;
@@ -194,7 +198,8 @@ impl DHFile {
             w.sync_data()?;
         }
 
-        let value_position = self.write_offset + DATA_HEADER_SIZE as u64 + data_header.key_size as u64;
+        let value_position =
+            self.write_offset + DATA_HEADER_SIZE as u64 + data_header.key_size as u64;
         let hint_header = HintHeader {
             timestamp: data_header.timestamp,
             key_size: data_header.key_size,
@@ -223,33 +228,31 @@ impl DHFile {
 pub struct DataFiles(Arc<RwLock<HashMap<u64, File>>>);
 
 impl DataFiles {
-    pub fn new() -> Self { Self(Arc::new(RwLock::new(HashMap::new()))) }
+    pub fn new() -> Self {
+        Self(Arc::new(RwLock::new(HashMap::new())))
+    }
 
     pub fn insert(&self, file_id: u64, file: File) {
-        self.0
-            .write()
-            .unwrap()
-            .insert(file_id, file);
+        self.0.write().unwrap().insert(file_id, file);
     }
 
     pub fn try_get(&self, storage_dir: &str, file_id: u64) -> Result<Option<File>, Error> {
         let r = self.0.read().unwrap();
-        if let Some(file) = r.get(&file_id) { Ok(Some(file.try_clone()?)) } else {
+        if let Some(file) = r.get(&file_id) {
+            Ok(Some(file.try_clone()?))
+        } else {
             match File::open(format!("{}/{}.data", storage_dir, file_id)) {
                 Ok(file) => {
                     drop(r);
 
-                    self.0
-                        .write()
-                        .unwrap()
-                        .insert(file_id, file.try_clone()?);
+                    self.0.write().unwrap().insert(file_id, file.try_clone()?);
 
                     Ok(Some(file))
                 }
                 Err(e) => match e.kind() {
                     io::ErrorKind::NotFound => Ok(None),
-                    _ => Err(e.into())
-                }
+                    _ => Err(e.into()),
+                },
             }
         }
     }

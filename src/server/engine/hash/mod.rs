@@ -1,13 +1,13 @@
-mod error;
 mod data_file;
+mod error;
 mod key_dirs;
-mod scanner;
 mod options;
+mod scanner;
 
+pub use data_file::{DHFile, DataFiles};
 pub use error::HashEngineError;
-pub use data_file::{DataFiles, DHFile};
 pub use key_dirs::{Entry, KeyDirs};
-pub use options::{Options, MergePolicy};
+pub use options::{MergePolicy, Options};
 pub use scanner::HashScanner;
 
 // --- std ---
@@ -46,7 +46,9 @@ impl HashEngineBuilder {
         self
     }
 
-    pub fn build(self) -> Result<HashEngine, Error> { HashEngine::init(self) }
+    pub fn build(self) -> Result<HashEngine, Error> {
+        HashEngine::init(self)
+    }
 }
 
 #[derive(Clone)]
@@ -66,12 +68,17 @@ impl HashEngine {
         use std::fs::create_dir;
 
         let path = Path::new(path);
-        if !path.is_dir() { create_dir(path)?; }
+        if !path.is_dir() {
+            create_dir(path)?;
+        }
 
         Ok(())
     }
 
-    fn scan_and_sort_dh_files(dir: &str, target_extension: &str) -> Result<(Vec<(String, u64)>, u64), Error> {
+    fn scan_and_sort_dh_files(
+        dir: &str,
+        target_extension: &str,
+    ) -> Result<(Vec<(String, u64)>, u64), Error> {
         // --- std ---
         use std::fs::read_dir;
 
@@ -82,16 +89,13 @@ impl HashEngine {
             let path = entry?.path();
             if let Some(extension) = path.extension() {
                 if extension == target_extension {
-                    let file_id = path
-                        .file_stem()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .parse()?;
+                    let file_id = path.file_stem().unwrap().to_str().unwrap().parse()?;
 
                     files.push((path.to_string_lossy().to_string(), file_id));
 
-                    if file_id > active_file_id { active_file_id = file_id; }
+                    if file_id > active_file_id {
+                        active_file_id = file_id;
+                    }
                 }
             }
         }
@@ -104,9 +108,15 @@ impl HashEngine {
     fn load_hints(dir: &str, key_dirs: &mut KeyDirs) -> Result<u64, Error> {
         let (files, active_file_id) = HashEngine::scan_and_sort_dh_files(dir, "hint")?;
 
-        for (path, file_id) in files.into_iter() { DHFile::load_hint(&path, file_id, key_dirs)?; }
+        for (path, file_id) in files.into_iter() {
+            DHFile::load_hint(&path, file_id, key_dirs)?;
+        }
 
-        if active_file_id == 0 { Ok(Utc::now().timestamp_nanos() as _) } else { Ok(active_file_id) }
+        if active_file_id == 0 {
+            Ok(Utc::now().timestamp_nanos() as _)
+        } else {
+            Ok(active_file_id)
+        }
     }
 
     fn init(builder: HashEngineBuilder) -> Result<HashEngine, Error> {
@@ -137,8 +147,16 @@ impl HashEngine {
             self.active_file = DHFile {
                 write_offset: 0,
                 file_id,
-                data_file: Arc::new(RwLock::new(DHFile::set_active_file(&self.storage_dir, file_id, "data")?)),
-                hint_file: Arc::new(RwLock::new(DHFile::set_active_file(&self.storage_dir, file_id, "hint")?)),
+                data_file: Arc::new(RwLock::new(DHFile::set_active_file(
+                    &self.storage_dir,
+                    file_id,
+                    "data",
+                )?)),
+                hint_file: Arc::new(RwLock::new(DHFile::set_active_file(
+                    &self.storage_dir,
+                    file_id,
+                    "hint",
+                )?)),
             };
         }
 
@@ -150,65 +168,54 @@ impl super::Engine for HashEngine {
     fn put(&mut self, k: Vec<u8>, v: Vec<u8>) -> Result<(), Error> {
         self.check_file_size()?;
         let entry = self.active_file.write(&k, &v)?;
-        self.key_dirs
-            .write()
-            .unwrap()
-            .insert(k, entry);
+        self.key_dirs.write().unwrap().insert(k, entry);
 
         Ok(())
     }
 
     fn get(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, Error> {
         // --- std ---
-        use std::io::{SeekFrom, Seek};
+        use std::io::{Seek, SeekFrom};
 
-        if let Some(entry) = self.key_dirs
-            .read()
-            .unwrap()
-            .get(k) {
+        if let Some(entry) = self.key_dirs.read().unwrap().get(k) {
             if self.active_file.file_id == entry.file_id {
-                let buffer = entry.seek_value(&mut self.active_file.data_file
-                    .write()
-                    .unwrap())?;
-                self.active_file.data_file
+                let buffer = entry.seek_value(&mut self.active_file.data_file.write().unwrap())?;
+                self.active_file
+                    .data_file
                     .write()
                     .unwrap()
                     .seek(SeekFrom::End(0))?;
 
                 Ok(Some(buffer))
             } else {
-                if let Some(mut file) = self.old_files.try_get(&self.storage_dir, entry.file_id)? { Ok(Some(entry.seek_value(&mut file)?)) } else {
+                if let Some(mut file) = self.old_files.try_get(&self.storage_dir, entry.file_id)? {
+                    Ok(Some(entry.seek_value(&mut file)?))
+                } else {
                     Err(HashEngineError::FileNotFound {
-                        path: format!("{}/{}", self.storage_dir, entry.file_id)
-                    }.into())
-//                    Ok(None)
+                        path: format!("{}/{}", self.storage_dir, entry.file_id),
+                    }
+                    .into())
+                    //                    Ok(None)
                 }
             }
         } else {
-//            Err(HashEngineError::KeyNotFound {
-//                k: k.to_vec()
-//            }.into())
+            //            Err(HashEngineError::KeyNotFound {
+            //                k: k.to_vec()
+            //            }.into())
             Ok(None)
         }
     }
 
     fn del(&mut self, k: &[u8]) -> Result<(), Error> {
-        if self.key_dirs
-            .read()
-            .unwrap()
-            .get(k)
-            .is_none() {
-//            Err(HashEngineError::KeyNotFound {
-//                k: k.to_vec()
-//            }.into())
+        if self.key_dirs.read().unwrap().get(k).is_none() {
+            //            Err(HashEngineError::KeyNotFound {
+            //                k: k.to_vec()
+            //            }.into())
             Ok(())
         } else {
             self.check_file_size()?;
             self.active_file.write(k, &[])?;
-            self.key_dirs
-                .write()
-                .unwrap()
-                .remove(k);
+            self.key_dirs.write().unwrap().remove(k);
 
             Ok(())
         }
@@ -219,7 +226,7 @@ impl super::Engine for HashEngine {
         let keys = {
             let scanner = match scanner {
                 Scanner::HashScanner(ref mut scanner) => scanner,
-//            _ => unreachable!(),
+                //            _ => unreachable!(),
             };
 
             scanner.scan(&self.key_dirs.read().unwrap())
@@ -227,7 +234,9 @@ impl super::Engine for HashEngine {
         let mut kvs = vec![];
 
         for k in keys {
-            if let Some(v) = self.get(&k)? { kvs.push((k, v)); }
+            if let Some(v) = self.get(&k)? {
+                kvs.push((k, v));
+            }
         }
 
         Ok((scanner, kvs))
@@ -237,7 +246,7 @@ impl super::Engine for HashEngine {
         // --- std ---
         use std::{
             collections::HashMap,
-            fs::{File, create_dir, remove_dir_all, rename},
+            fs::{create_dir, remove_dir_all, rename, File},
         };
 
         const MERGE_DIR: &'static str = ".merge";
@@ -247,8 +256,12 @@ impl super::Engine for HashEngine {
         let mut dh_file = DHFile {
             write_offset: 0,
             file_id,
-            data_file: Arc::new(RwLock::new(DHFile::set_active_file(MERGE_DIR, file_id, "data")?)),
-            hint_file: Arc::new(RwLock::new(DHFile::set_active_file(MERGE_DIR, file_id, "hint")?)),
+            data_file: Arc::new(RwLock::new(DHFile::set_active_file(
+                MERGE_DIR, file_id, "data",
+            )?)),
+            hint_file: Arc::new(RwLock::new(DHFile::set_active_file(
+                MERGE_DIR, file_id, "hint",
+            )?)),
         };
 
         let mut w = self.key_dirs.write().unwrap();
@@ -256,7 +269,9 @@ impl super::Engine for HashEngine {
         {
             let mut file_map = HashMap::new();
             let (files, _) = HashEngine::scan_and_sort_dh_files(&self.storage_dir, "data")?;
-            for (path, file_id) in files.iter() { file_map.insert(file_id, File::open(path)?); }
+            for (path, file_id) in files.iter() {
+                file_map.insert(file_id, File::open(path)?);
+            }
 
             for (k, entry) in w.iter_mut() {
                 if let Some(file) = file_map.get_mut(&entry.file_id) {
@@ -265,8 +280,12 @@ impl super::Engine for HashEngine {
                         dh_file = DHFile {
                             write_offset: 0,
                             file_id,
-                            data_file: Arc::new(RwLock::new(DHFile::set_active_file(MERGE_DIR, file_id, "data")?)),
-                            hint_file: Arc::new(RwLock::new(DHFile::set_active_file(MERGE_DIR, file_id, "hint")?)),
+                            data_file: Arc::new(RwLock::new(DHFile::set_active_file(
+                                MERGE_DIR, file_id, "data",
+                            )?)),
+                            hint_file: Arc::new(RwLock::new(DHFile::set_active_file(
+                                MERGE_DIR, file_id, "hint",
+                            )?)),
                         };
                     }
 
@@ -275,8 +294,9 @@ impl super::Engine for HashEngine {
                     *entry = new_entry;
                 } else {
                     return Err(HashEngineError::FileNotFound {
-                        path: format!("{}/{}", self.storage_dir, entry.file_id)
-                    }.into());
+                        path: format!("{}/{}", self.storage_dir, entry.file_id),
+                    }
+                    .into());
                 }
             }
         }
@@ -292,7 +312,9 @@ impl super::Engine for HashEngine {
                     .unwrap()
                     .join(&format!("backup-data-{}", Utc::now().timestamp_nanos())),
             )?;
-        } else { remove_dir_all(&self.storage_dir)?; }
+        } else {
+            remove_dir_all(&self.storage_dir)?;
+        }
         rename(MERGE_DIR, &self.storage_dir)?;
 
         drop(w);
